@@ -1,0 +1,26 @@
+{
+  "control": {
+    "port": 13000
+  },
+  "servers": [
+    {
+      "listen": 18080,
+      "root": "./www",
+      "index": "test1/index.html",
+      "errorPage": "404.html"
+    },
+    {
+      "listen": 18081,
+      "root": "./www",
+      "index": "test2/index.html",
+      "errorPage": "404.html"
+    },
+    {
+      "listen": 18082,
+      "root": "./www/wanfang/",
+      "index": "index.html",
+      "errorPage": "404.html",
+      "spaFallback": true
+    }
+  ]
+}

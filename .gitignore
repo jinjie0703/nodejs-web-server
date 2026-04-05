@@ -1,0 +1,24 @@
+# 依赖目录 (Dependencies)
+node_modules/
+
+# 编译和临时构建产物 (Build output)
+dist/
+build/
+exe/
+*.tsbuildinfo
+
+# 环境变量及本地配置文件 (Environment & Local config)
+.env
+.env.*
+.env.local
+
+# 日志文件 (Logs)
+logs/
+*.log
+npm-debug.log*
+
+# 编辑器与系统生成文件 (OS & Editor generated files)
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

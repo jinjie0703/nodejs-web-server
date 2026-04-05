@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web 服务器控制台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Tailwind CSS for rapid modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="css/style.css" rel="stylesheet" />
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  </head>
+  <body class="bg-slate-900 text-gray-200 min-h-screen">
+    <div id="app" class="max-w-6xl mx-auto p-6">
+      <header
+        class="flex justify-between items-center mb-8 bg-slate-800 p-4 rounded-xl shadow-lg border border-slate-700"
+      >
+        <h1
+          class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400"
+        >
+          🚀 Node.js Web 服务器控制台
+        </h1>
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2">
+            <span class="text-emerald-400 font-mono font-semibold">
+              运行中实例：{{ servers.length }}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- 控制面板 -->
+        <div class="lg:col-span-1 space-y-6">
+          <div
+            class="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700"
+          >
+            <h2
+              class="text-lg font-semibold text-slate-300 mb-4 flex items-center"
+            >
+              <svg
+                class="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                ></path>
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                ></path>
+              </svg>
+              控制设置
+            </h2>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-400 mb-1"
+                >启动端口</label
+              >
+              <input
+                type="number"
+                v-model.number="port"
+                class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono transition-all box-border"
+              />
+            </div>
+
+            <div class="flex gap-3">
+              <button
+                @click="startServer"
+                :disabled="isCurrentPortRunning"
+                class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-blue-500/30"
+              >
+                {{ isCurrentPortRunning ? '当前端口已运行' : '启动服务' }}
+              </button>
+            </div>
+            <div
+              v-if="wsError"
+              class="mt-4 text-rose-400 text-sm p-3 bg-rose-900/30 border border-rose-800 rounded-lg"
+            >
+              ⚠️ {{ wsError }}
+            </div>
+          </div>
+
+          <!-- 运行实例列表 -->
+          <div
+            class="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700"
+          >
+            <h2 class="text-lg font-semibold text-slate-300 mb-4">
+              运行中的实例
+            </h2>
+            <div class="space-y-3 max-h-[250px] overflow-y-auto pr-2">
+              <div
+                v-for="srv in servers"
+                :key="srv.port"
+                class="flex justify-between items-center bg-slate-900 p-3 rounded-lg border border-slate-700"
+              >
+                <div class="flex items-center gap-2">
+                  <span class="relative flex h-3 w-3">
+                    <span
+                      class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"
+                    ></span>
+                    <span
+                      class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"
+                    ></span>
+                  </span>
+                  <span class="text-emerald-400 font-mono text-sm"
+                    >端口 {{ srv.port }}</span
+                  >
+                </div>
+                <button
+                  @click="stopServer(srv.port)"
+                  class="text-xs bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white px-3 py-1 rounded transition-colors border border-rose-600/30"
+                >
+                  停止
+                </button>
+              </div>
+              <div
+                v-if="servers.length === 0"
+                class="text-sm text-slate-500 text-center py-4"
+              >
+                暂无运行中的服务
+              </div>
+            </div>
+          </div>
+
+          <!-- 系统日志 -->
+          <div
+            class="bg-slate-800 p-6 rounded-xl shadow-lg border border-slate-700 flex flex-col h-[250px]"
+          >
+            <h2
+              class="text-lg font-semibold text-slate-300 mb-4 flex items-center"
+            >
+              <svg
+                class="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                ></path>
+              </svg>
+              系统终端
+            </h2>
+            <div
+              class="flex-1 bg-slate-950 rounded-lg p-3 overflow-y-auto font-mono text-sm border border-slate-700"
+              ref="sysLogBox"
+            >
+              <div
+                v-for="(log, idx) in sysLogs"
+                :key="idx"
+                class="mb-1 text-slate-300"
+              >
+                <span class="text-slate-500">[{{ log.time }}]</span>
+                <span
+                  class="ml-2"
+                  :class="{'text-emerald-400': log.msg.includes('started'), 'text-rose-400': log.msg.includes('Error')}"
+                  >{{ log.msg }}</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 访问日志 -->
+        <div class="lg:col-span-2">
+          <div
+            class="bg-slate-800 rounded-xl shadow-lg border border-slate-700 h-full max-h-[850px] flex flex-col"
+          >
+            <div
+              class="p-6 border-b border-slate-700 flex justify-between items-center"
+            >
+              <h2
+                class="text-lg font-semibold text-slate-300 flex items-center"
+              >
+                <svg
+                  class="w-5 h-5 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  ></path>
+                </svg>
+                实时访问日志
+              </h2>
+              <span
+                class="text-sm font-mono bg-slate-700 text-slate-300 px-3 py-1 rounded-full border border-slate-600"
+                >总数：{{ accessLogs.length }}</span
+              >
+            </div>
+
+            <div class="flex-1 overflow-auto p-0">
+              <table class="w-full text-left border-collapse">
+                <thead
+                  class="sticky top-0 bg-slate-900/90 backdrop-blur text-slate-400 text-sm z-10 box-border"
+                >
+                  <tr>
+                    <th
+                      class="px-6 py-3 font-semibold border-b border-slate-700"
+                    >
+                      时间
+                    </th>
+                    <th
+                      class="px-6 py-3 font-semibold border-b border-slate-700"
+                    >
+                      IP
+                    </th>
+                    <th
+                      class="px-6 py-3 font-semibold border-b border-slate-700"
+                    >
+                      方法
+                    </th>
+                    <th
+                      class="px-6 py-3 font-semibold border-b border-slate-700"
+                    >
+                      HTTP版本
+                    </th>
+                    <th
+                      class="px-6 py-3 font-semibold border-b border-slate-700"
+                    >
+                      资源地址
+                    </th>
+                    <th
+                      class="px-6 py-3 font-semibold border-b border-slate-700"
+                    >
+                      状态
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="text-sm font-mono divide-y divide-slate-700/50">
+                  <tr
+                    v-for="(log, idx) in accessLogs"
+                    :key="idx"
+                    class="hover:bg-slate-700/30 transition-colors"
+                  >
+                    <td class="px-6 py-3 text-slate-500">{{ log.time }}</td>
+                    <td class="px-6 py-3 text-blue-400">{{ log.ip }}</td>
+                    <td class="px-6 py-3">
+                      <span
+                        class="bg-slate-700 px-2 py-1 rounded text-slate-300 text-xs"
+                        >{{ log.method }}</span
+                      >
+                    </td>
+                    <td class="px-6 py-3 text-violet-400">{{ log.version }}</td>
+                    <td
+                      class="px-6 py-3 text-slate-300 truncate max-w-[200px]"
+                      :title="log.url"
+                    >
+                      {{ log.url }}
+                    </td>
+                    <td class="px-6 py-3">
+                      <span
+                        :class="getStatusClass(log.statusCode)"
+                        class="px-2 py-1 rounded text-xs font-bold border"
+                      >
+                        {{ log.statusCode }}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr v-if="accessLogs.length === 0">
+                    <td
+                      colspan="6"
+                      class="px-6 py-10 text-center text-slate-500"
+                    >
+                      暂无访问日志。请先启动服务并访问页面！
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="border-t border-slate-700 p-6">
+              <h3 class="text-base font-semibold text-slate-300 mb-3">
+                响应摘要日志
+              </h3>
+              <div class="space-y-2 max-h-[220px] overflow-y-auto pr-2">
+                <div
+                  v-for="(item, idx) in responseLogs"
+                  :key="idx"
+                  class="bg-slate-900/80 border border-slate-700 rounded-lg px-4 py-3 text-xs font-mono"
+                >
+                  <div class="flex flex-wrap gap-3 items-center">
+                    <span class="text-slate-500">{{ item.time }}</span>
+                    <span class="text-blue-400">{{ item.method }}</span>
+                    <span class="text-violet-400">{{ item.version }}</span>
+                    <span
+                      :class="getStatusClass(item.statusCode)"
+                      class="px-2 py-0.5 rounded border"
+                    >
+                      {{ item.statusCode }}
+                    </span>
+                    <span class="text-emerald-400">{{ item.contentType }}</span>
+                    <span class="text-amber-400"
+                      >{{ item.contentLength }} B</span
+                    >
+                  </div>
+                  <div class="mt-1 text-slate-400 truncate" :title="item.url">
+                    {{ item.url }}
+                  </div>
+                </div>
+                <div
+                  v-if="responseLogs.length === 0"
+                  class="text-sm text-slate-500 text-center py-3"
+                >
+                  暂无响应摘要日志。
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Application Script -->
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
